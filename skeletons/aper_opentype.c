@@ -30,6 +30,11 @@ aper_open_type_get_simple(const asn_codec_ctx_t *ctx,
 			FREEMEM(buf);
 			ASN__DECODE_STARVED;
 		}
+		/* Validate we won't read beyond buffer bounds */
+		if (chunk_bytes > 0 && (size_t)(chunk_bytes << 3) > (pd->nbits - pd->nboff)) {
+			FREEMEM(buf);
+			ASN__DECODE_FAILED;
+		}
 		if(bufLen + chunk_bytes > bufSize) {
 			void *ptr;
 			bufSize = chunk_bytes + (bufSize << 2);

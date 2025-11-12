@@ -153,6 +153,10 @@ OCTET_STRING_decode_aper(const asn_codec_ctx_t *opt_codec_ctx,
         if(bpc) {
             ASN_DEBUG("Decoding OCTET STRING size %lld",
                       (long long int)csiz->upper_bound);
+            /* Validate we won't read beyond buffer bounds */
+            ssize_t needed_bits = unit_bits * csiz->upper_bound;
+            if (needed_bits > 0 && (size_t)needed_bits > (pd->nbits - pd->nboff))
+                RETURN(RC_FAIL);
             ret = OCTET_STRING_per_get_characters(pd, st->buf,
                                                   csiz->upper_bound,
                                                   bpc, unit_bits,
@@ -163,6 +167,10 @@ OCTET_STRING_decode_aper(const asn_codec_ctx_t *opt_codec_ctx,
         } else {
             ASN_DEBUG("Decoding BIT STRING size %lld",
                       (long long int)csiz->upper_bound);
+            /* Validate we won't read beyond buffer bounds */
+            ssize_t needed_bits = unit_bits * csiz->upper_bound;
+            if (needed_bits > 0 && (size_t)needed_bits > (pd->nbits - pd->nboff))
+                RETURN(RC_FAIL);
             ret = per_get_many_bits(pd, st->buf, 0,
                                     unit_bits * csiz->upper_bound);
         }
@@ -215,6 +223,9 @@ OCTET_STRING_decode_aper(const asn_codec_ctx_t *opt_codec_ctx,
                 st->bits_unused = 8 - (len_bits & 0x7);
             /* len_bits be multiple of 16K if repeat is set */
         }
+        /* Validate we won't read beyond buffer bounds */
+        if (len_bits > 0 && (size_t)len_bits > (pd->nbits - pd->nboff))
+            RETURN(RC_FAIL);
         p = REALLOC(st->buf, st->size + len_bytes + 1);
         if(!p) RETURN(RC_FAIL);
         st->buf = (uint8_t *)p;

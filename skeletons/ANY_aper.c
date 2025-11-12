@@ -146,6 +146,10 @@ ANY_decode_aper(const asn_codec_ctx_t *opt_codec_ctx,
         len_bytes = raw_len;
         len_bits = len_bytes * 8;
 
+        /* Validate we won't read beyond buffer bounds */
+        if (len_bits > 0 && (size_t)len_bits > (pd->nbits - pd->nboff))
+            RETURN(RC_FAIL);
+
         p = REALLOC(st->buf, st->size + len_bytes + 1);
         if(!p) RETURN(RC_FAIL);
         st->buf = (uint8_t *)p;
