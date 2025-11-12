@@ -153,7 +153,8 @@ OPEN_TYPE_aper_unknown_type_discard_bytes (asn_per_data_t *pd) {
             /* Invalid length - return error */
             return rv;
         }
-        if (bytes > 10 * ASN_DUMMY_BYTES)
+        /* Validate bytes to prevent shift overflow */
+        if (bytes > (SIZE_MAX >> 3) || bytes > 10 * ASN_DUMMY_BYTES)
         {
             return rv;
         }

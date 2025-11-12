@@ -143,8 +143,20 @@ ANY_decode_aper(const asn_codec_ctx_t *opt_codec_ctx,
 
         ASN_DEBUG("Got PER length len %" ASN_PRI_SIZE ", %s (%s)", raw_len,
                   repeat ? "repeat" : "once", td->name);
+        
+        /* Validate raw_len to prevent overflow */
+        if(raw_len > (SIZE_MAX >> 3)) {
+            RETURN(RC_FAIL);
+        }
+        
         len_bytes = raw_len;
         len_bits = len_bytes * 8;
+        
+        /* Check buffer size limit */
+        if(st->size > SIZE_MAX - len_bytes - 1 ||
+           (st->size + len_bytes) > (1024 * 1024 * 1024)) {
+            RETURN(RC_FAIL);
+        }
 
         p = REALLOC(st->buf, st->size + len_bytes + 1);
         if(!p) RETURN(RC_FAIL);
