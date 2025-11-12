@@ -48,9 +48,8 @@ aper_get_length(asn_per_data_t *pd, ssize_t lb, ssize_t ub,
 	if((value & 128) == 0)  /* #11.9.3.6 */
 		return (value & 0x7F);
 	if((value & 64) == 0) { /* #11.9.3.7 */
-		int next_byte = per_get_few_bits(pd, 8);
-		if(next_byte < 0) return -1;
-		value = ((value & 63) << 8) | next_byte;
+		value = ((value & 63) << 8) | per_get_few_bits(pd, 8);
+		if(value < 0) return -1;
 		return value;
 	}
 	value &= 63;	/* this is "m" from X.691, #11.9.3.8 */
@@ -111,10 +110,6 @@ aper_get_nsnnwn(asn_per_data_t *pd) {
 
 	/* X.691 2002 10.9.3.6 */
 	length = per_get_few_bits(pd, 7);
-	if (length < 0) {
-		/* Negative value indicates error */
-		return -1;
-	}
 	if (length > 4) {
 		/* todo */
 		ASN_DEBUG("todo: X.691 2002 10.9.3.6 for length > 4");
@@ -122,13 +117,6 @@ aper_get_nsnnwn(asn_per_data_t *pd) {
 	}
 	ASN_DEBUG("length %d\n", length);
 
-	/* Validate length * 8 doesn't exceed maximum bits we can read (31) */
-	if (length > 3) {
-		/* length * 8 would exceed 31 bits, which is the max for per_get_few_bits */
-		ASN_DEBUG("length %d * 8 exceeds maximum bits", length);
-		return -1;
-	}
-	
 	/* todo: 0xffffffff will be seen as -1 and will lead to decoding failure */
 	return per_get_few_bits(pd, length * 8);
 }
@@ -185,11 +173,6 @@ aper_get_constrained_whole_number(asn_per_data_t *pd, long lb, long ub) {
 	/* and so length determinant is retrieved as X.691 2002 10.9.3.3 */
 	/* number of bytes to store the range */
 	for (range_len = 3; ; range_len++) {
-		/* Prevent infinite loop and overflow in shift operation */
-		if (range_len > (int)(sizeof(long) * 8 / 8)) {
-			ASN_DEBUG("range_len %d exceeds safe limit", range_len);
-			return -1;
-		}
 		long bits = ((long)1) << (8 * range_len);
 		if (range - 1 < bits)
 			break;
@@ -197,17 +180,12 @@ aper_get_constrained_whole_number(asn_per_data_t *pd, long lb, long ub) {
 	value_len = aper_get_constrained_whole_number(pd, 1, range_len);
 	if (value_len == -1)
 		return -1;
-	if (value_len < 0 || value_len > 4) {
-		ASN_DEBUG("todo: aper_get_constrained_whole_number: value_len %d out of range", value_len);
+	if (value_len > 4) {
+		ASN_DEBUG("todo: aper_get_constrained_whole_number: value_len > 4");
 		return -1;
 	}
 	if (aper_get_align(pd) < 0)
 		return -1;
-	/* Validate value_len * 8 doesn't exceed maximum bits we can read (31) */
-	if (value_len * 8 > 31) {
-		ASN_DEBUG("value_len %d * 8 exceeds maximum bits", value_len);
-		return -1;
-	}
 	value = per_get_few_bits(pd, value_len * 8);
 	if (value < 0 || value >= range)
 		return -1;

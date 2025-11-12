@@ -30,39 +30,15 @@ aper_open_type_get_simple(const asn_codec_ctx_t *ctx,
 			FREEMEM(buf);
 			ASN__DECODE_STARVED;
 		}
-		/* Validate chunk_bytes to prevent overflow in shift and addition operations */
-		if(chunk_bytes > (SIZE_MAX >> 3)) {
-			/* chunk_bytes << 3 would overflow */
-			FREEMEM(buf);
-			ASN__DECODE_FAILED;
-		}
-		/* Check for addition overflow */
-		if(bufLen > SIZE_MAX - chunk_bytes) {
-			FREEMEM(buf);
-			ASN__DECODE_FAILED;
-		}
 		if(bufLen + chunk_bytes > bufSize) {
 			void *ptr;
-			size_t newSize;
-			/* Check for overflow in bufSize << 2 */
-			if(bufSize > (SIZE_MAX >> 2)) {
-				/* Use a safer calculation */
-				newSize = bufLen + chunk_bytes;
-			} else {
-				newSize = chunk_bytes + (bufSize << 2);
-			}
-			/* Ensure newSize is reasonable (limit to ~1GB) */
-			if(newSize > (1024 * 1024 * 1024)) {
-				FREEMEM(buf);
-				ASN__DECODE_FAILED;
-			}
-			ptr = REALLOC(buf, newSize);
+			bufSize = chunk_bytes + (bufSize << 2);
+			ptr = REALLOC(buf, bufSize);
 			if(!ptr) {
 				FREEMEM(buf);
 				ASN__DECODE_FAILED;
 			}
 			buf = ptr;
-			bufSize = newSize;
 		}
 		if(per_get_many_bits(pd, buf + bufLen, 0, chunk_bytes << 3)) {
 			FREEMEM(buf);
@@ -73,12 +49,6 @@ aper_open_type_get_simple(const asn_codec_ctx_t *ctx,
 
 	ASN_DEBUG("Getting open type %s encoded in %ld bytes", td->name,
 		(long)bufLen);
-
-	/* Validate bufLen before shift to prevent overflow */
-	if(bufLen > (SIZE_MAX >> 3)) {
-		FREEMEM(buf);
-		ASN__DECODE_FAILED;
-	}
 
 	memset(&spd, 0, sizeof(spd));
 	spd.buffer = buf;

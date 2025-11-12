@@ -163,18 +163,10 @@ OCTET_STRING_decode_aper(const asn_codec_ctx_t *opt_codec_ctx,
         } else {
             ASN_DEBUG("Decoding BIT STRING size %lld",
                       (long long int)csiz->upper_bound);
-            /* Validate multiplication to prevent overflow */
-            if(unit_bits > 0 && csiz->upper_bound > INT_MAX / unit_bits) {
-                RETURN(RC_FAIL);
-            }
             ret = per_get_many_bits(pd, st->buf, 0,
                                     unit_bits * csiz->upper_bound);
         }
         if(ret < 0) RETURN(RC_WMORE);
-        /* Validate multiplication for consumed_myself */
-        if(unit_bits > 0 && csiz->upper_bound > (SIZE_MAX - consumed_myself) / unit_bits) {
-            RETURN(RC_FAIL);
-        }
         consumed_myself += unit_bits * csiz->upper_bound;
         st->buf[st->size] = 0;
         if(bpc == 0) {
@@ -206,12 +198,6 @@ OCTET_STRING_decode_aper(const asn_codec_ctx_t *opt_codec_ctx,
                   (long)csiz->effective_bits, (long)raw_len,
                   repeat ? "repeat" : "once", td->name);
 
-        /* Validate raw_len to prevent overflow */
-        if(raw_len > (SSIZE_MAX >> 10)) {
-            /* raw_len is unreasonably large */
-            RETURN(RC_FAIL);
-        }
-
         /* X.691 #16 NOTE 1  for fixed length (<=16 bits) strings */
         if ((raw_len > 2) || (csiz->upper_bound > 2) || (csiz->range_bits != 0))
         {
@@ -220,15 +206,7 @@ OCTET_STRING_decode_aper(const asn_codec_ctx_t *opt_codec_ctx,
         }
 
         if(bpc) {
-            /* Validate raw_len * bpc doesn't overflow */
-            if(raw_len > SSIZE_MAX / bpc) {
-                RETURN(RC_FAIL);
-            }
             len_bytes = raw_len * bpc;
-            /* Validate len_bytes * unit_bits doesn't overflow */
-            if(unit_bits > 0 && len_bytes > SSIZE_MAX / unit_bits) {
-                RETURN(RC_FAIL);
-            }
             len_bits = len_bytes * unit_bits;
         } else {
             len_bits = raw_len;
@@ -236,12 +214,6 @@ OCTET_STRING_decode_aper(const asn_codec_ctx_t *opt_codec_ctx,
             if(len_bits & 0x7)
                 st->bits_unused = 8 - (len_bits & 0x7);
             /* len_bits be multiple of 16K if repeat is set */
-        }
-        /* Validate st->size + len_bytes doesn't overflow and is reasonable */
-        if(len_bytes > (SIZE_MAX - st->size - 1) || 
-           (st->size + len_bytes) > (1024 * 1024 * 1024)) {
-            /* Buffer would be too large (>1GB) or overflow */
-            RETURN(RC_FAIL);
         }
         p = REALLOC(st->buf, st->size + len_bytes + 1);
         if(!p) RETURN(RC_FAIL);

@@ -21,7 +21,7 @@ check_PROGRAMS =                \
     check-APER-OCTET_STRING     \
     check-APER-INTEGER		\
     check-APER-INTEGER-constraint \
-    check-APER-malformed        \
+    test-aper-segfault          \
     check-UPER-support          \
     check-UPER-UniversalString  \
     check-UPER-INTEGER

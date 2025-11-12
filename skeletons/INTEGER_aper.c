@@ -82,22 +82,12 @@ INTEGER_decode_aper(const asn_codec_ctx_t *opt_codec_ctx,
                 /* X.691 #12.2.6 length determinant + lb (1) */
                 length += 1;
                 ASN_DEBUG("Got length %d", length);
-                
-                /* Validate length to prevent shift overflow */
-                if (length < 0 || length > (int)(sizeof(intmax_t))) {
-                    ASN__DECODE_FAILED;
-                }
-                
                 if (aper_get_align(pd) != 0)
                     ASN__DECODE_FAILED;
                 while (length--) {
                     int buf = per_get_few_bits(pd, 8);
                     if (buf < 0)
                         ASN__DECODE_FAILED;
-                    /* Validate shift amount to prevent undefined behavior */
-                    if (8 * length >= (int)(sizeof(intmax_t) * 8)) {
-                        ASN__DECODE_FAILED;
-                    }
                     value += (((intmax_t)buf) << (8 * length));
                 }
 
