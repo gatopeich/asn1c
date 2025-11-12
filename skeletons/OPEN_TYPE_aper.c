@@ -157,6 +157,9 @@ OPEN_TYPE_aper_unknown_type_discard_bytes (asn_per_data_t *pd) {
         {
             return rv;
         }
+        /* Validate we won't read beyond buffer bounds */
+        if (bytes > 0 && (size_t)(bytes << 3) > (pd->nbits - pd->nboff))
+            return rv;
         else if (bytes > ASN_DUMMY_BYTES)
         {
             dummy_ptr = CALLOC(1, bytes);
